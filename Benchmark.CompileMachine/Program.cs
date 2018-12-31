@@ -21,21 +21,21 @@ namespace Benchmark.CompileMachine
             "lets do math f(x)=sin(x)/cos(x) * (911 - (4 + 711)) / sqrt(3393923 + 4423123)\t\r\n" +
             "those operators with more than 00000001 characters    += -= == /= *=\r\r\n\n";
 
-        [Benchmark]
+        //[Benchmark]
         public void Regex()
         {
             if (RegexLexer.Lex(Source) == null)
                 throw new Exception("Lexing error");
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void Charwise()
         {
             if (CharwiseLexer.Lex(Source) == null)
                 throw new Exception("Lexing error");
         }
 
-        [Benchmark]
+        //[Benchmark]
         public void StateMachine()
         {
             var lexer = new Lexer();
@@ -52,6 +52,37 @@ namespace Benchmark.CompileMachine
                 if (lexemes == null)
                     throw new Exception("Lexing error");
             }
+        }
+
+        [Benchmark]
+        public void Linq()
+        {
+            if (CanonicalizeLinq("hello") != "ehllo") throw new Exception();
+            if (CanonicalizeLinq("fahrenheit") != "aeefhhinrt") throw new Exception();
+        }
+
+        [Benchmark]
+        public void Array()
+        {
+            if (CanonicalizeArray("hello") != "ehllo") throw new Exception();
+            if (CanonicalizeArray("fahrenheit") != "aeefhhinrt") throw new Exception();
+        }
+
+        string CanonicalizeLinq(string s)
+        {
+            var chars = s.Select(ch => Char.ToLower(ch))
+                .OrderBy(ch => ch)
+                .ToArray();
+            return new string(chars);
+        }
+
+        string CanonicalizeArray(string s)
+        {
+            var chars = s.ToCharArray();
+            for (int i = 0; i < chars.Length; i++)
+                chars[i] = Char.ToLower(chars[i]);
+            System.Array.Sort(chars);
+            return new string(chars);
         }
     }
 

@@ -1,0 +1,95 @@
+﻿{
+module internal ImageLang.Lib.Lexer
+
+open System
+open Microsoft.FSharp.Text.Lexing
+open Ast
+open Parser
+open System.Collections.Generic
+open System.Globalization
+open System.Text
+open Microsoft.FSharp.Text.Lexing
+open Microsoft.FSharp.Text.Parsing.ParseHelpers
+
+let lexeme (lexbuf : LexBuffer<char>) = LexBuffer<_>.LexemeString lexbuf
+
+let dbg value =
+    //printf "%A " value
+    value
+
+let keywordMap =
+    let temp = new Dictionary<_,_>(StringComparer.InvariantCultureIgnoreCase)
+    temp.Add("and", AND)
+    temp.Add("or", OR)
+    temp.Add("not", NOT)
+    temp.Add("color", COLOR)
+    temp.Add("kernel", KERNEL)
+    temp.Add("convolute", CONVOLUTE)
+    temp.Add("rect", RECT)
+    temp.Add("for", FOR)
+    temp.Add("in", IN)
+    temp.Add("yield", YIELD)
+    temp.Add("if", IF)
+    temp.Add("else", ELSE)
+    temp.Add("true", TRUE)
+    temp.Add("false", FALSE)
+    temp
+
+let lookup word =
+    let (result, value) = keywordMap.TryGetValue(word)
+    if result
+    then value
+    else IDENT(word)
+}
+
+let whitespace  = [' ' '\t' '\r']
+let newline     = ('\n')
+let digit       = ['0'-'9']   
+let int         = digit+   
+let float       = digit+ '.' digit+   
+let identchar   = ['_' 'a'-'z' 'A'-'Z' '0'-'9']
+let ident       = ['_' 'a'-'z' 'A'-'Z'] identchar*
+
+rule token = parse
+| whitespace   				{ token lexbuf }
+| newline					{ lexbuf.EndPos <- lexbuf.EndPos.NextLine; token lexbuf }
+| ":="						{ dbg COLONEQ }
+| "("						{ dbg LPAREN }
+| ")"						{ dbg RPAREN }
+| "{"						{ dbg LBRACE }
+| "}"						{ dbg RBRACE }
+| "=="						{ dbg EQEQ }
+| "!="						{ dbg NEQ }
+| ">"						{ dbg GT }
+| ">="						{ dbg GE }
+| "<"						{ dbg LT }
+| "<="						{ dbg LE }
+| "="						{ dbg EQ }
+| "+"						{ dbg PLUS }
+| "-"						{ dbg MINUS }
+| "*"						{ dbg STAR }
+| "%"						{ dbg PERCENT }
+| "@"						{ dbg AT }
+| ","						{ dbg COMMA }
+| ".."						{ dbg DOTDOT }
+| "."						{ dbg DOT }
+| ident						{ dbg (lookup (lexeme lexbuf)) }
+| int						{ dbg (NUMBER(Double.Parse(lexeme lexbuf))) }
+| float						{ dbg (NUMBER(Double.Parse(lexeme lexbuf))) }
+| eof						{ dbg EOF }
+| "//"						{ dbg (comment lexbuf; token lexbuf) }
+| "/"						{ dbg SLASH }
+| "\""						{ dbg (STRING((string lexbuf.StartPos "" lexbuf))) }
+
+and comment = parse
+| eof	                    { () }
+| newline				    { lexbuf.EndPos <- lexbuf.EndPos.NextLine; () }
+| _							{ comment lexbuf }
+
+and string pos str = parse
+| "\\"						{ string pos str lexbuf }
+| "\r"						{ string pos str lexbuf }
+| "\""						{ str }
+| newline					{ lexbuf.EndPos <- lexbuf.EndPos.NextLine; string pos (str + (lexeme lexbuf)) lexbuf }
+| eof						{ failwithf "end of file in string started at or near %A" pos }
+| _							{ string pos (str + (lexeme lexbuf)) lexbuf }

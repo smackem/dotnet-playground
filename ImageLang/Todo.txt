@@ -1,0 +1,16 @@
+﻿+ color members: red,green,blue,alpha,intensity
++ pos members: x,y
++ rect members: x,y,w,h
++ '-' as color inversion operator
++ default identifiers 'W', 'H', 'BLACK', 'WHITE', 'TRANSPARENT'
++ false and true keywords
++ color arithmetics (*, +, -, /), color * number
+- convolution operator
+- hex literals
+- gridsplitters
+- avalonedit with syntax highlighting
+- source and target view in image area
+- "take" button to set source = target
+- yield statements (for&if-statement expressions)
+- draw blocks
+- math operators (sin cos tan etc.)
