@@ -19,7 +19,7 @@ let dbg value =
     value
 
 let keywordMap =
-    let temp = new Dictionary<_,_>(StringComparer.InvariantCultureIgnoreCase)
+    let temp = new Dictionary<_,_>()
     temp.Add("and", AND)
     temp.Add("or", OR)
     temp.Add("not", NOT)

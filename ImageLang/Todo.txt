@@ -5,9 +5,17 @@
 + default identifiers 'W', 'H', 'BLACK', 'WHITE', 'TRANSPARENT'
 + false and true keywords
 + color arithmetics (*, +, -, /), color * number
-- convolution operator
++ rect properties top,bottom,left,right
++ 'in' operator for rect, kernel, (range?)
++ convolution operator
+- replace "color" with "rgb", "rgba", "srgb", "srgba"
+- conditional operator
++ identifier scopes
+- print output
++ waitcursor when rendering
 - hex literals
-- gridsplitters
+- HMTL-like color literals (#ffc080)
++ gridsplitters
 - avalonedit with syntax highlighting
 - source and target view in image area
 - "take" button to set source = target

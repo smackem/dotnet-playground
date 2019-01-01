@@ -83,6 +83,7 @@ Cond:
     | Term GE Term                              { dbg (Ge($1, $3)) }
     | Term LT Term                              { dbg (Lt($1, $3)) }
     | Term LE Term                              { dbg (Le($1, $3)) }
+    | Term IN Term                              { dbg (In($1, $3)) }
     | Term                                      { $1 }
 
 Term:

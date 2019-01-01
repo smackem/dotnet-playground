@@ -84,7 +84,7 @@ namespace ImageLang
                 this.target.UnlockBits(this.targetData);
             }
 
-            public unsafe ColorArgb GetPixel(int x, int y)
+            public ColorArgb GetPixel(int x, int y)
             {
                 if (x >= 0 && x < this.sourceData.Width
                 && y >= 0 && y < this.sourceData.Height)
@@ -93,11 +93,54 @@ namespace ImageLang
                 return ColorArgb.FromArgb(0, 0, 0, 0);
             }
 
-            public unsafe void SetPixel(int x, int y, ColorArgb argb)
+            public void SetPixel(int x, int y, ColorArgb argb)
             {
                 if (x >= 0 && x < this.targetData.Width
                 && y >= 0 && y < this.targetData.Height)
                     this.pTargetPixels[y * targetData.Width + x] = argb;
+            }
+
+            public ColorArgb Convolute(int x, int y, int radius, int length, double[] kernel)
+            {
+                var kernelSum = 0.0;
+                var a = 0.0;
+                var r = 0.0;
+                var g = 0.0;
+                var b = 0.0;
+
+                for (int kernelY = 0, sourceY = y - radius; kernelY < length; kernelY++, sourceY++)
+                {
+                    for (int kernelX = 0, sourceX = x - radius; kernelX < length; kernelX++, sourceX++)
+                    {
+                        if (sourceX >= 0 && sourceX < this.source.Width
+                        && sourceY >= 0 && sourceY < this.source.Height)
+                        {
+                            var value = kernel[kernelY * length + kernelX];
+                            var px = this.pSourcePixels[sourceY * sourceData.Width + sourceX];
+                            r += value * px.R;
+                            g += value * px.G;
+                            b += value * px.B;
+                            kernelSum += value;
+
+                            if (sourceX == x && sourceY == y)
+                                a = px.A;
+                        }
+                    }
+                }
+
+                if (kernelSum == 0.0)
+                    return ColorArgb.FromArgb(Clamp(a), Clamp(r), Clamp(g), Clamp(b));
+
+                return ColorArgb.FromArgb(Clamp(a / kernelSum), Clamp(r / kernelSum), Clamp(g / kernelSum), Clamp(b / kernelSum));
+            }
+
+            byte Clamp(double d)
+            {
+                if (d < 0)
+                    return 0;
+                if (d > 255)
+                    return 255;
+                return (byte)(d + 0.5);
             }
         }
     }

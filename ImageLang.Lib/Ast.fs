@@ -27,6 +27,7 @@ and expr =
     | Mul of expr * expr
     | Div of expr * expr
     | Mod of expr * expr
+    | In of expr * expr
     | Neg of expr
     | Not of expr
     | MemberInvoke of expr * string

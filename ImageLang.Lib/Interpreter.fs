@@ -9,7 +9,7 @@ type value =
     | Boolean of bool
     | String of string
     | Pos of double * double
-    | Kernel of double list
+    | Kernel of int * int * double array // radius,length,values
     | Color of ColorArgb
     | Rect of double * double * double * double // x,y,width,height
     member this.AssertNumber caller =
@@ -26,7 +26,7 @@ type value =
         | _ -> failwithf "%A expects Pos but found '%A'" caller this
     member this.AssertKernel caller =
         match this with
-        | Kernel ns -> ns
+        | Kernel(radius, length, ns) -> radius, length, ns
         | _ -> failwithf "%A expects Kernel but found '%A'" caller this
     member this.AssertColor caller =
         match this with
@@ -62,16 +62,25 @@ type value =
             | "y" -> Number y
             | "w" -> Number w
             | "h" -> Number h
+            | "left" -> Number x
+            | "top" -> Number y
+            | "right" -> Number (x + w)
+            | "bottom" -> Number (y + h)
             | _ -> failwithf "Unknown %A member %s" this memberName
         | _ -> failwithf "Unknown %A member %s" this memberName
 
 
-type Context(bitmap: IBitmap) =
+type Context(bitmap: IBitmap, parent: Context option) =
     let idents = new Dictionary<string, value>()
     member this.GetIdent ident =
         let ok, v = idents.TryGetValue(ident)
-        if ok then Some v else None
+        if ok then Some v
+        else
+            match parent with
+            | Some ctx -> ctx.GetIdent ident
+            | None -> None
     member this.SetIdent ident value = idents.[ident] <- value
+    member this.HasLocalIdent ident = idents.ContainsKey ident
     member this.Bitmap = bitmap
 
 
@@ -91,9 +100,10 @@ let walkRect x y width height =
 
 
 let rec interpret program bitmap =
-    let ctx = new Context(bitmap)
+    let ctx = new Context(bitmap, None)
     ctx.SetIdent "W" (Number <| float bitmap.Width)
     ctx.SetIdent "H" (Number <| float bitmap.Height)
+    ctx.SetIdent "IMAGE" (Rect(0.0, 0.0, float bitmap.Width, float bitmap.Height))
     ctx.SetIdent "BLACK" (Color <| ColorArgb.FromArgb(255uy, 0uy, 0uy, 0uy))
     ctx.SetIdent "WHITE" (Color <| ColorArgb.FromArgb(255uy, 255uy, 255uy, 255uy))
     ctx.SetIdent "TRANSPARENT" (Color <| ColorArgb.FromArgb(0uy, 255uy, 255uy, 255uy))
@@ -101,17 +111,21 @@ let rec interpret program bitmap =
     | Statements stmts -> evalStmtList stmts ctx
 
 and evalStmtList stmts ctx =
+    let ctx = new Context(ctx.Bitmap, Some ctx)
     stmts |> List.iter (fun stmt -> evalStmt stmt ctx)
 
 and evalStmt stmt ctx =
     match stmt with
     | Declaration(ident, rexpr) ->
-        let v = evalExpr rexpr ctx
-        ctx.SetIdent ident v
+        if ctx.HasLocalIdent ident
+        then failwithf "Identifier %s is already declared" ident
+        else
+            let v = evalExpr rexpr ctx
+            ctx.SetIdent ident v
     | Assignment(ident, rexpr) ->
         match ctx.GetIdent ident with
-        | Some _ -> failwithf "Identifier %s already exists" ident
-        | None ->
+        | None -> failwithf "Identifier %s not found" ident
+        | Some _ ->
             let v = evalExpr rexpr ctx
             ctx.SetIdent ident v
     | PixelAssign(posExpr, rexpr) ->
@@ -179,8 +193,6 @@ and evalExpr expr ctx =
     | Minus(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l - r)
-        | Number n, Color c ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR - n, c.ScG - n, c.ScB - n)
         | Color c, Number n ->
             Color <| ColorArgb.FromArgb(c.ScA, c.ScR - n, c.ScG - n, c.ScB - n)
         | Color l, Color r ->
@@ -194,20 +206,28 @@ and evalExpr expr ctx =
         | Color c, Number n ->
             Color <| ColorArgb.FromArgb(c.ScA, c.ScR * n, c.ScG * n, c.ScB * n)
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.ScA * r.ScA, l.ScR * r.ScR, l.ScG * r.ScG, l.ScB * r.ScB)
+            Color <| ColorArgb.FromArgb(l.ScA, l.ScR * r.ScR, l.ScG * r.ScG, l.ScB * r.ScB)
         | l, r -> failwithf "* expects colors or numbers but found %A and %A" l r
     | Div(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l / r)
-        | Number n, Color c ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR / n, c.ScG / n, c.ScB / n)
         | Color c, Number n ->
             Color <| ColorArgb.FromArgb(c.ScA, c.ScR / n, c.ScG / n, c.ScB / n)
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.ScA / r.ScA, l.ScR / r.ScR, l.ScG / r.ScG, l.ScB / r.ScB)
+            Color <| ColorArgb.FromArgb(l.ScA, l.ScR / r.ScR, l.ScG / r.ScG, l.ScB / r.ScB)
         | l, r -> failwithf "/ expects colors or numbers but found %A and %A" l r
     | Mod(lexpr, rexpr) ->
-        ((evalExpr lexpr ctx).AssertNumber "%" % (evalExpr rexpr ctx).AssertNumber "%") |> Number
+        match evalExpr lexpr ctx, evalExpr rexpr ctx with
+        | Number l, Number r -> Number (l % r)
+        | Color c, Number n ->
+            Color <| ColorArgb.FromArgb(c.ScA, c.ScR % n, c.ScG % n, c.ScB % n)
+        | Color l, Color r ->
+            Color <| ColorArgb.FromArgb(l.ScA, l.ScR % r.ScR, l.ScG % r.ScG, l.ScB % r.ScB)
+        | l, r -> failwithf "%% expects colors or numbers but found %A and %A" l r
+    | In(lexpr, rexpr) ->
+        match evalExpr lexpr ctx, evalExpr rexpr ctx with
+        | Pos(x, y), Rect(rx, ry, rw, rh) -> Boolean (x >= rx && x < rx + rw && y >= ry && y < ry + rh)
+        | l, r -> failwithf "In expects POS in RECT but found %A and %A" l r
     | Neg expr ->
         match evalExpr expr ctx with
         | Number n -> Number -n
@@ -246,16 +266,22 @@ and evalExpr expr ctx =
                     (evalExpr gexpr ctx).AssertNumber "green" |> toColorByte,
                     (evalExpr bexpr ctx).AssertNumber "blue" |> toColorByte)
     | expr.Kernel(exprs) ->
-        let rootOfLength = sqrt <| float exprs.Length
-        if rootOfLength - float(int rootOfLength) <> 0.0
-        then failwithf "The number of kernel elements must be quadratic, but is '%A'" rootOfLength
+        let length = sqrt <| float exprs.Length
+        if round(length) <> length
+        then failwithf "The number of kernel elements must be quadratic, but is '%A'" length
         else
-            exprs
-            |> List.map (fun expr -> (evalExpr expr ctx).AssertNumber "Kernel")
-            |> Kernel
+            let values =
+                exprs
+                |> List.map (fun expr -> (evalExpr expr ctx).AssertNumber "Kernel")
+                |> List.toArray
+            Kernel(int length, (int length) / 2, values)
     | expr.Rect(xyposExpr, whposExpr) ->
         let x,y = (evalExpr xyposExpr ctx).AssertPos "Rect"
         let w,h = (evalExpr whposExpr ctx).AssertPos "Rect"
         Rect(x, y, w, h)
     | Convolute(kernelExpr, posExpr) ->
-        failwith "NOT IMPLEMENTED"
+        match evalExpr kernelExpr ctx, evalExpr posExpr ctx with
+        | Kernel(length, radius, values), Pos(x, y) ->
+            ctx.Bitmap.Convolute(int x, int y, int radius, int length, values)
+            |> Color
+        | l, r -> failwithf "%A %A" l r

@@ -48,7 +48,16 @@ namespace ImageLang
 
         private void RenderButton_OnClick(object sender, RoutedEventArgs e)
         {
-            _model.Render();
+            var oldCursor = Cursor;
+            Cursor = Cursors.Wait;
+            try
+            {
+                _model.Render();
+            }
+            finally
+            {
+                Cursor = oldCursor;
+            }
         }
     }
 }

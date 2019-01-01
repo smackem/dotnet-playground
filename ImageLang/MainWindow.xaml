@@ -21,13 +21,18 @@
             <Button Click="RenderButton_OnClick">Render</Button>
         </StackPanel>
 
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto"
+                      Margin="0,0,0,5">
             <Image Source="{Binding Path=TargetBitmap}" Stretch="None" />
         </ScrollViewer>
+        <GridSplitter Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Height="5" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" />
         <TextBox Grid.Row="2"
                  Text="{Binding Path=Source}"
                  AcceptsReturn="True"
                  FontFamily="Consolas, monospace"
+                 FontSize="12pt"
                  VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto"
                  AcceptsTab="True" />

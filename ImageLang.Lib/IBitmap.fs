@@ -52,9 +52,9 @@ type ColorArgb =
     member this.Intensity = (0.299 * (float this.R) + 0.587 * (float this.G) + 0.114 * (float this.B)) * (float this.A) / 255.0;
     member this.ScIntensity = (0.299 * (float this.R) + 0.587 * (float this.G) + 0.114 * (float this.B)) * (float this.A) / (255.0 * 255.0);
 
-
 type IBitmap =
-    abstract member GetPixel : int * int -> ColorArgb
-    abstract member SetPixel : int * int * ColorArgb -> unit
+    abstract member GetPixel : x:int * y:int -> ColorArgb
+    abstract member SetPixel : x:int * y:int * argb:ColorArgb -> unit
     abstract member Width : int
     abstract member Height : int
+    abstract member Convolute : x:int * y:int * radius:int * length:int * kernel:double array -> ColorArgb

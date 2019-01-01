@@ -49,20 +49,19 @@ draw from 0,0 closed {
     line 30,10
 }
 
-W := 600
-H := 400
-WHITE := color(1 1 1)
-BLACK := color(0 0 0)
-TRANS := color(1 1 1 0)
+k := kernel(0 1 2 1 0
+           1 2 3 2 1
+           2 3 5 3 2
+           1 2 3 2 1
+           0 1 2 1 0)
 
-c := color(0.5 0 1 0.7)
+k = kernel(-1 -1 -1
+           -1  8 -1
+           -1 -1 -1)
 
-for pos in rect(10,10 (W-10),(H-10)) {
-    @pos = c
+for pos in IMAGE {
+	px := @pos
+	new := convolute(k pos)
+	@pos = color(new.r px.g px.b)
+	@pos = new
 }
-
-@100,100 = TRANS
-@101,100 = TRANS
-@102,101 = TRANS
-@100,101 = TRANS
-@100,102 = TRANS
