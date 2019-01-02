@@ -5,6 +5,19 @@ type token =
   | STRING of (string)
   | NUMBER of (double)
   | EOF
+  | ABS
+  | SQRT
+  | SIN
+  | COS
+  | TAN
+  | ASIN
+  | ACOS
+  | ATAN
+  | ATAN2
+  | LOG
+  | BLT
+  | QMARK
+  | COLON
   | TRUE
   | FALSE
   | LBRACE
@@ -15,7 +28,10 @@ type token =
   | IN
   | YIELD
   | DOTDOT
-  | COLOR
+  | RGB
+  | RGBA
+  | SRGB
+  | SRGBA
   | KERNEL
   | CONVOLUTE
   | RECT
@@ -45,6 +61,19 @@ type tokenId =
     | TOKEN_STRING
     | TOKEN_NUMBER
     | TOKEN_EOF
+    | TOKEN_ABS
+    | TOKEN_SQRT
+    | TOKEN_SIN
+    | TOKEN_COS
+    | TOKEN_TAN
+    | TOKEN_ASIN
+    | TOKEN_ACOS
+    | TOKEN_ATAN
+    | TOKEN_ATAN2
+    | TOKEN_LOG
+    | TOKEN_BLT
+    | TOKEN_QMARK
+    | TOKEN_COLON
     | TOKEN_TRUE
     | TOKEN_FALSE
     | TOKEN_LBRACE
@@ -55,7 +84,10 @@ type tokenId =
     | TOKEN_IN
     | TOKEN_YIELD
     | TOKEN_DOTDOT
-    | TOKEN_COLOR
+    | TOKEN_RGB
+    | TOKEN_RGBA
+    | TOKEN_SRGB
+    | TOKEN_SRGBA
     | TOKEN_KERNEL
     | TOKEN_CONVOLUTE
     | TOKEN_RECT
@@ -92,7 +124,7 @@ type nonTerminalId =
     | NONTERM_AndExpr
     | NONTERM_Cond
     | NONTERM_Term
-    | NONTERM_Special
+    | NONTERM_Function
     | NONTERM_Molecule
     | NONTERM_MoleculeList
     | NONTERM_Atom

@@ -49,19 +49,42 @@ draw from 0,0 closed {
     line 30,10
 }
 
-k := kernel(0 1 2 1 0
-           1 2 3 2 1
-           2 3 5 3 2
-           1 2 3 2 1
-           0 1 2 1 0)
+// ==============================================
 
-k = kernel(-1 -1 -1
+gauss := kernel(0 1 2 1 0
+                1 2 4 2 1
+                2 4 8 4 2
+                1 2 4 2 1
+                0 1 2 1 0)
+
+k := kernel(-1 -1 -1
            -1  8 -1
            -1 -1 -1)
 
+sobel1 := kernel( 1  2  1
+                  0  0  0
+                 -1 -2 -1)
+sobel2 := kernel(1  0 -1
+                 2  0 -2
+                 1  0 -1)
+
+for pos in IMAGE {
+	@pos = convolute(gauss pos)
+}
+
+blt IMAGE
+
 for pos in IMAGE {
 	px := @pos
-	new := convolute(k pos)
-	@pos = color(new.r px.g px.b)
-	@pos = new
+	n1 := convolute(sobel1 pos)
+	n2 := convolute(sobel2 pos)
+	@pos = sqrt((n1 * n1 + n2 * n2))
 }
+
+blt IMAGE
+
+for pos in IMAGE {
+	px := @pos
+	@pos = px.i > 50 ? WHITE : BLACK
+}
+

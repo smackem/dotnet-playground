@@ -2,6 +2,9 @@
 
 open Ast
 open System.Collections.Generic
+open System.IO
+open System.Text
+open Helpers
 
 
 type value =
@@ -68,6 +71,13 @@ type value =
             | "bottom" -> Number (y + h)
             | _ -> failwithf "Unknown %A member %s" this memberName
         | _ -> failwithf "Unknown %A member %s" this memberName
+    member this.Print() =
+        match this with
+        | Number d -> d.ToString()
+        | Boolean b -> b.ToString()
+        | String s -> s
+        | Color argb -> argb.ToString()
+        | _ -> sprintf "'%A'" this
 
 
 type Context(bitmap: IBitmap, parent: Context option) =
@@ -83,13 +93,12 @@ type Context(bitmap: IBitmap, parent: Context option) =
     member this.HasLocalIdent ident = idents.ContainsKey ident
     member this.Bitmap = bitmap
 
-
 let toi f = int (f + 0.5)
 
-let toColorByte f =
+let toSColorByte f =
     if f > 0.0 && f <= 1.0
     then byte(f * 255.0 + 0.5)
-    else byte(f + 0.5)
+    else clampToByte f
 
 let walkRect x y width height =
     let nx, ny, nw, nh = toi x, toi y, toi width, toi height
@@ -160,10 +169,23 @@ and evalStmt stmt ctx =
         for n in lower .. upper do
             ctx.SetIdent ident (Number <| float n)
             evalStmtList stmts ctx
-    | Yield(expr) -> ()
+    | Yield expr -> ()
+    | Log exprs ->
+        let buffer = new StringBuilder()
+        exprs |> List.iter (fun expr ->
+            let v = evalExpr expr ctx
+            buffer.Append(v.Print()).Append(" ") |> ignore)
+        printfn "%s" <| buffer.ToString()
+    | Blt expr ->
+        let x,y,w,h = (evalExpr expr ctx).AssertRect("Blt")
+        ctx.Bitmap.Blt(toi x, toi y, toi w, toi h)
 
 and evalExpr expr ctx =
     match expr with
+    | Conditional(condExpr, ifExpr, elseExpr) ->
+        if (evalExpr condExpr ctx).AssertBoolean("Conditional")
+        then evalExpr ifExpr ctx
+        else evalExpr elseExpr ctx
     | Or(lexpr, rexpr) ->
         ((evalExpr lexpr ctx).AssertBoolean "Or" || (evalExpr rexpr ctx).AssertBoolean "Or") |> Boolean
     | And(lexpr, rexpr) ->
@@ -184,45 +206,45 @@ and evalExpr expr ctx =
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l + r)
         | Number n, Color c ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR + n, c.ScG + n, c.ScB + n)
+            Color <| ColorArgb.FromArgb(c.A, clampToByte(float c.R + n), clampToByte(float c.G + n), clampToByte(float c.B + n))
         | Color c, Number n ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR + n, c.ScG + n, c.ScB + n)
+            Color <| ColorArgb.FromArgb(c.A, clampToByte(float c.R + n), clampToByte(float c.G + n), clampToByte(float c.B + n))
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.ScA + r.ScA, l.ScR + r.ScR, l.ScG + r.ScG, l.ScB + r.ScB)
+            Color <| ColorArgb.FromArgb(l.A, l.R + r.R, l.G + r.G, l.B + r.B)
         | l, r -> failwithf "+ expects colors or numbers but found %A and %A" l r
     | Minus(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l - r)
         | Color c, Number n ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR - n, c.ScG - n, c.ScB - n)
+            Color <| ColorArgb.FromArgb(c.A, clampToByte(float c.R - n), clampToByte(float c.G - n), clampToByte(float c.B - n))
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.ScA - r.ScA, l.ScR - r.ScR, l.ScG - r.ScG, l.ScB - r.ScB)
+            Color <| ColorArgb.FromArgb(l.A, l.R - r.R, l.G - r.G, l.B - r.B)
         | l, r -> failwithf "- expects colors or numbers but found %A and %A" l r
     | Mul(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l * r)
         | Number n, Color c ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR * n, c.ScG * n, c.ScB * n)
+            Color <| ColorArgb.FromSargb(c.ScA, c.ScR * n, c.ScG * n, c.ScB * n)
         | Color c, Number n ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR * n, c.ScG * n, c.ScB * n)
+            Color <| ColorArgb.FromSargb(c.ScA, c.ScR * n, c.ScG * n, c.ScB * n)
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.ScA, l.ScR * r.ScR, l.ScG * r.ScG, l.ScB * r.ScB)
+            Color <| ColorArgb.FromSargb(l.ScA, l.ScR * r.ScR, l.ScG * r.ScG, l.ScB * r.ScB)
         | l, r -> failwithf "* expects colors or numbers but found %A and %A" l r
     | Div(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l / r)
         | Color c, Number n ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR / n, c.ScG / n, c.ScB / n)
+            Color <| ColorArgb.FromSargb(c.ScA, c.ScR / n, c.ScG / n, c.ScB / n)
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.ScA, l.ScR / r.ScR, l.ScG / r.ScG, l.ScB / r.ScB)
+            Color <| ColorArgb.FromSargb(l.ScA, l.ScR / r.ScR, l.ScG / r.ScG, l.ScB / r.ScB)
         | l, r -> failwithf "/ expects colors or numbers but found %A and %A" l r
     | Mod(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l % r)
         | Color c, Number n ->
-            Color <| ColorArgb.FromArgb(c.ScA, c.ScR % n, c.ScG % n, c.ScB % n)
+            Color <| ColorArgb.FromSargb(c.ScA, c.ScR % n, c.ScG % n, c.ScB % n)
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.ScA, l.ScR % r.ScR, l.ScG % r.ScG, l.ScB % r.ScB)
+            Color <| ColorArgb.FromSargb(l.ScA, l.ScR % r.ScR, l.ScG % r.ScG, l.ScB % r.ScB)
         | l, r -> failwithf "%% expects colors or numbers but found %A and %A" l r
     | In(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
@@ -234,7 +256,7 @@ and evalExpr expr ctx =
         | Color argb -> Color <| ColorArgb.FromArgb(argb.A, 255uy - argb.R, 255uy - argb.G, 255uy - argb.B)
         | other -> failwithf "Negation expected Number or Color but found %A" other
     | Not expr ->
-        (evalExpr expr ctx).AssertBoolean "%" |> not |> Boolean
+        (evalExpr expr ctx).AssertBoolean "Not" |> not |> Boolean
     | MemberInvoke(recvExpr, memberName) ->
         let recv = evalExpr recvExpr ctx
         recv.InvokeProperty memberName
@@ -253,18 +275,30 @@ and evalExpr expr ctx =
         ((evalExpr xexpr ctx).AssertNumber ",", (evalExpr yexpr ctx).AssertNumber ",") |> Pos
     | expr.Boolean b ->
         Boolean b
-    | ColorRgb(rexpr, gexpr, bexpr) ->
+    | Rgb(rexpr, gexpr, bexpr) ->
         Color <| ColorArgb.FromArgb(
                     255uy,
-                    (evalExpr rexpr ctx).AssertNumber "red" |> toColorByte,
-                    (evalExpr gexpr ctx).AssertNumber "green" |> toColorByte,
-                    (evalExpr bexpr ctx).AssertNumber "blue" |> toColorByte)
-    | ColorRgba(rexpr, gexpr, bexpr, aexpr) ->
+                    (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
+                    (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
+                    (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
+    | Rgba(rexpr, gexpr, bexpr, aexpr) ->
         Color <| ColorArgb.FromArgb(
-                    (evalExpr aexpr ctx).AssertNumber "alpha" |> toColorByte,
-                    (evalExpr rexpr ctx).AssertNumber "red" |> toColorByte,
-                    (evalExpr gexpr ctx).AssertNumber "green" |> toColorByte,
-                    (evalExpr bexpr ctx).AssertNumber "blue" |> toColorByte)
+                    (evalExpr aexpr ctx).AssertNumber "alpha" |> clampToByte,
+                    (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
+                    (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
+                    (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
+    | Srgb(rexpr, gexpr, bexpr) ->
+        Color <| ColorArgb.FromArgb(
+                    255uy,
+                    (evalExpr rexpr ctx).AssertNumber "red" |> toSColorByte,
+                    (evalExpr gexpr ctx).AssertNumber "green" |> toSColorByte,
+                    (evalExpr bexpr ctx).AssertNumber "blue" |> toSColorByte)
+    | Srgba(rexpr, gexpr, bexpr, aexpr) ->
+        Color <| ColorArgb.FromArgb(
+                    (evalExpr aexpr ctx).AssertNumber "alpha" |> toSColorByte,
+                    (evalExpr rexpr ctx).AssertNumber "red" |> toSColorByte,
+                    (evalExpr gexpr ctx).AssertNumber "green" |> toSColorByte,
+                    (evalExpr bexpr ctx).AssertNumber "blue" |> toSColorByte)
     | expr.Kernel(exprs) ->
         let length = sqrt <| float exprs.Length
         if round(length) <> length
@@ -285,3 +319,26 @@ and evalExpr expr ctx =
             ctx.Bitmap.Convolute(int x, int y, int radius, int length, values)
             |> Color
         | l, r -> failwithf "%A %A" l r
+    | Abs expr ->
+       (evalExpr expr ctx).AssertNumber("Abs") |> abs |> Number
+    | Sqrt expr ->
+        match evalExpr expr ctx with
+        | Number n -> Number <| sqrt n
+        | Color argb -> Color <| ColorArgb.FromSargb(argb.ScA, sqrt argb.ScR, sqrt argb.ScG, sqrt argb.ScB)
+        | other -> failwithf "Sqrt expected Number or Color but found %A" other
+    | Sin expr ->
+        (evalExpr expr ctx).AssertNumber("Sin") |> sin |> Number
+    | Cos expr ->
+        (evalExpr expr ctx).AssertNumber("Cos") |> cos |> Number
+    | Tan expr ->
+        (evalExpr expr ctx).AssertNumber("Tan") |> tan |> Number
+    | Asin expr ->
+        (evalExpr expr ctx).AssertNumber("Asin") |> asin |> Number
+    | Acos expr ->
+        (evalExpr expr ctx).AssertNumber("Acos") |> acos |> Number
+    | Atan expr ->
+        (evalExpr expr ctx).AssertNumber("Atan") |> atan |> Number
+    | Atan2(aexpr, bexpr) ->
+        let a = (evalExpr aexpr ctx).AssertNumber("Atan2")
+        let b = (evalExpr bexpr ctx).AssertNumber("Atan2")
+        Number <| atan2 a b

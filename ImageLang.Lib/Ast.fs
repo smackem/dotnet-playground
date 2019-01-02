@@ -12,6 +12,8 @@ and statement =
     | ForIn of string * expr * statement list
     | ForInRange of string * expr * expr * statement list
     | Yield of expr
+    | Log of expr list
+    | Blt of expr
 
 and expr =
     | Or of expr * expr
@@ -37,8 +39,20 @@ and expr =
     | Number of double
     | String of string
     | Boolean of bool
-    | ColorRgb of expr * expr * expr
-    | ColorRgba of expr * expr * expr * expr
+    | Rgb of expr * expr * expr
+    | Rgba of expr * expr * expr * expr
+    | Srgb of expr * expr * expr
+    | Srgba of expr * expr * expr * expr
     | Kernel of expr list
     | Convolute of expr * expr
     | Rect of expr * expr
+    | Conditional of expr * expr * expr
+    | Sin of expr
+    | Cos of expr
+    | Tan of expr
+    | Asin of expr
+    | Acos of expr
+    | Atan of expr
+    | Atan2 of expr * expr
+    | Abs of expr
+    | Sqrt of expr

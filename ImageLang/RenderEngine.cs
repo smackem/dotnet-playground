@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Gdi = System.Drawing;
@@ -103,10 +104,10 @@ namespace ImageLang
             public ColorArgb Convolute(int x, int y, int radius, int length, double[] kernel)
             {
                 var kernelSum = 0.0;
-                var a = 0.0;
                 var r = 0.0;
                 var g = 0.0;
                 var b = 0.0;
+                byte a = 255;
 
                 for (int kernelY = 0, sourceY = y - radius; kernelY < length; kernelY++, sourceY++)
                 {
@@ -129,9 +130,15 @@ namespace ImageLang
                 }
 
                 if (kernelSum == 0.0)
-                    return ColorArgb.FromArgb(Clamp(a), Clamp(r), Clamp(g), Clamp(b));
+                    return ColorArgb.FromArgb(a, Clamp(r), Clamp(g), Clamp(b));
 
-                return ColorArgb.FromArgb(Clamp(a / kernelSum), Clamp(r / kernelSum), Clamp(g / kernelSum), Clamp(b / kernelSum));
+                return ColorArgb.FromArgb(a, Clamp(r / kernelSum), Clamp(g / kernelSum), Clamp(b / kernelSum));
+            }
+
+            public void Blt(int x, int y, int width, int height)
+            {
+                var size = this.sourceData.Height * this.sourceData.Stride;
+                Buffer.MemoryCopy(this.pTargetPixels, this.pSourcePixels, size, size);
             }
 
             byte Clamp(double d)

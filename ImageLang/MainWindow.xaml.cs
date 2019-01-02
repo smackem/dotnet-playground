@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -33,7 +34,7 @@ namespace ImageLang
             DataContext = _model;
         }
 
-        private void OpenButton_OnClick(object sender, RoutedEventArgs e)
+        void OpenButton_OnClick(object sender, RoutedEventArgs e)
         {
             var dialog = new OpenFileDialog();
 
@@ -46,7 +47,7 @@ namespace ImageLang
             }
         }
 
-        private void RenderButton_OnClick(object sender, RoutedEventArgs e)
+        void RenderButton_OnClick(object sender, RoutedEventArgs e)
         {
             var oldCursor = Cursor;
             Cursor = Cursors.Wait;
@@ -57,6 +58,15 @@ namespace ImageLang
             finally
             {
                 Cursor = oldCursor;
+            }
+        }
+
+        void TextBox_PreviewKeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter
+            && (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                RenderButton_OnClick(sender, e);
             }
         }
     }

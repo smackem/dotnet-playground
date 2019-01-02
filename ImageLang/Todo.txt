@@ -8,17 +8,24 @@
 + rect properties top,bottom,left,right
 + 'in' operator for rect, kernel, (range?)
 + convolution operator
-- replace "color" with "rgb", "rgba", "srgb", "srgba"
-- conditional operator
++ replace "color" with "rgb", "rgba", "srgb", "srgba"
++ conditional operator
 + identifier scopes
-- print output
++ print output
++ basic math-operators
 + waitcursor when rendering
++ blt statement to blt target to source
++ output console window
+- remember last script
+- usual method-call syntax
+- ';' for position expressions
++ better tostring for output
+- better blt: take rect into account
 - hex literals
-- HMTL-like color literals (#ffc080)
+- HMTL-like color literals (#ffc080@ff)
++ shortcut for render
 + gridsplitters
 - avalonedit with syntax highlighting
 - source and target view in image area
-- "take" button to set source = target
 - yield statements (for&if-statement expressions)
 - draw blocks
-- math operators (sin cos tan etc.)

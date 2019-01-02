@@ -42,7 +42,7 @@ type ColorArgb =
     static member public FromArgb(argb) =
         new ColorArgb(Argb = argb)
 
-    static member public FromArgb(scA, scR, scG, scB) =
+    static member public FromSargb(scA, scR, scG, scB) =
         new ColorArgb(A = clampToByte(scA * 255.0), R = clampToByte(scR * 255.0), G = clampToByte(scG * 255.0), B = clampToByte(scB * 255.0))
 
     member this.ScA = (float this.A) / 255.0
@@ -52,9 +52,13 @@ type ColorArgb =
     member this.Intensity = (0.299 * (float this.R) + 0.587 * (float this.G) + 0.114 * (float this.B)) * (float this.A) / 255.0;
     member this.ScIntensity = (0.299 * (float this.R) + 0.587 * (float this.G) + 0.114 * (float this.B)) * (float this.A) / (255.0 * 255.0);
 
+    override this.ToString() = sprintf "#%02x%02x%02x@%02x" this.R this.G this.B this.A
+
+
 type IBitmap =
     abstract member GetPixel : x:int * y:int -> ColorArgb
     abstract member SetPixel : x:int * y:int * argb:ColorArgb -> unit
     abstract member Width : int
     abstract member Height : int
     abstract member Convolute : x:int * y:int * radius:int * length:int * kernel:double array -> ColorArgb
+    abstract member Blt : x:int * y:int * width:int * height:int -> unit
