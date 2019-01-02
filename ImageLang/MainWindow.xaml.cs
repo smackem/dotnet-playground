@@ -14,6 +14,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Xml;
+using ICSharpCode.AvalonEdit.Highlighting;
+using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using Microsoft.Win32;
 
 namespace ImageLang
@@ -32,6 +35,30 @@ namespace ImageLang
             _model = new MainWindowModel();
 
             DataContext = _model;
+
+            textEditor.Text = _model.Source;
+            textEditor.Options.ConvertTabsToSpaces = true;
+            textEditor.Options.HideCursorWhileTyping = true;
+            textEditor.Options.HighlightCurrentLine = true;
+            textEditor.Options.IndentationSize = 4;
+            textEditor.Options.ShowSpaces = true;
+            textEditor.Options.ShowTabs = true;
+            textEditor.Options.ShowColumnRuler = true;
+
+            IHighlightingDefinition customHighlighting;
+            using (Stream s = GetType().Assembly.GetManifestResourceStream("ImageLang.ImageLang.xshd"))
+            {
+                if (s == null)
+                    throw new InvalidOperationException("Could not find embedded resource");
+
+                using (var reader = new XmlTextReader(s))
+                {
+                    customHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
+                }
+            }
+
+            HighlightingManager.Instance.RegisterHighlighting("ImageLang", new string[] { ".cool" }, customHighlighting);
+            textEditor.SyntaxHighlighting = customHighlighting;
         }
 
         void OpenButton_OnClick(object sender, RoutedEventArgs e)
@@ -68,6 +95,11 @@ namespace ImageLang
             {
                 RenderButton_OnClick(sender, e);
             }
+        }
+
+        void TextEditor_TextChanged(object sender, EventArgs e)
+        {
+            _model.Source = textEditor.Text;
         }
     }
 }

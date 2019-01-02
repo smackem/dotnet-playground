@@ -275,70 +275,124 @@ and evalExpr expr ctx =
         ((evalExpr xexpr ctx).AssertNumber ",", (evalExpr yexpr ctx).AssertNumber ",") |> Pos
     | expr.Boolean b ->
         Boolean b
-    | Rgb(rexpr, gexpr, bexpr) ->
-        Color <| ColorArgb.FromArgb(
-                    255uy,
-                    (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
-                    (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
-                    (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
-    | Rgba(rexpr, gexpr, bexpr, aexpr) ->
-        Color <| ColorArgb.FromArgb(
-                    (evalExpr aexpr ctx).AssertNumber "alpha" |> clampToByte,
-                    (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
-                    (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
-                    (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
-    | Srgb(rexpr, gexpr, bexpr) ->
-        Color <| ColorArgb.FromArgb(
-                    255uy,
-                    (evalExpr rexpr ctx).AssertNumber "red" |> toSColorByte,
-                    (evalExpr gexpr ctx).AssertNumber "green" |> toSColorByte,
-                    (evalExpr bexpr ctx).AssertNumber "blue" |> toSColorByte)
-    | Srgba(rexpr, gexpr, bexpr, aexpr) ->
-        Color <| ColorArgb.FromArgb(
-                    (evalExpr aexpr ctx).AssertNumber "alpha" |> toSColorByte,
-                    (evalExpr rexpr ctx).AssertNumber "red" |> toSColorByte,
-                    (evalExpr gexpr ctx).AssertNumber "green" |> toSColorByte,
-                    (evalExpr bexpr ctx).AssertNumber "blue" |> toSColorByte)
+    | FunctionInvoke(ident, exprs) ->
+        invokeFunc ident exprs ctx
     | expr.Kernel(exprs) ->
-        let length = sqrt <| float exprs.Length
-        if round(length) <> length
-        then failwithf "The number of kernel elements must be quadratic, but is '%A'" length
-        else
-            let values =
-                exprs
-                |> List.map (fun expr -> (evalExpr expr ctx).AssertNumber "Kernel")
-                |> List.toArray
-            Kernel(int length, (int length) / 2, values)
+        createKernel exprs ctx
     | expr.Rect(xyposExpr, whposExpr) ->
         let x,y = (evalExpr xyposExpr ctx).AssertPos "Rect"
         let w,h = (evalExpr whposExpr ctx).AssertPos "Rect"
         Rect(x, y, w, h)
-    | Convolute(kernelExpr, posExpr) ->
-        match evalExpr kernelExpr ctx, evalExpr posExpr ctx with
-        | Kernel(length, radius, values), Pos(x, y) ->
-            ctx.Bitmap.Convolute(int x, int y, int radius, int length, values)
-            |> Color
-        | l, r -> failwithf "%A %A" l r
-    | Abs expr ->
-       (evalExpr expr ctx).AssertNumber("Abs") |> abs |> Number
-    | Sqrt expr ->
-        match evalExpr expr ctx with
-        | Number n -> Number <| sqrt n
-        | Color argb -> Color <| ColorArgb.FromSargb(argb.ScA, sqrt argb.ScR, sqrt argb.ScG, sqrt argb.ScB)
-        | other -> failwithf "Sqrt expected Number or Color but found %A" other
-    | Sin expr ->
-        (evalExpr expr ctx).AssertNumber("Sin") |> sin |> Number
-    | Cos expr ->
-        (evalExpr expr ctx).AssertNumber("Cos") |> cos |> Number
-    | Tan expr ->
-        (evalExpr expr ctx).AssertNumber("Tan") |> tan |> Number
-    | Asin expr ->
-        (evalExpr expr ctx).AssertNumber("Asin") |> asin |> Number
-    | Acos expr ->
-        (evalExpr expr ctx).AssertNumber("Acos") |> acos |> Number
-    | Atan expr ->
-        (evalExpr expr ctx).AssertNumber("Atan") |> atan |> Number
-    | Atan2(aexpr, bexpr) ->
-        let a = (evalExpr aexpr ctx).AssertNumber("Atan2")
-        let b = (evalExpr bexpr ctx).AssertNumber("Atan2")
-        Number <| atan2 a b
+
+and invokeFunc ident exprs ctx =
+    match ident with
+    | "rgb" ->
+        match exprs with
+        | rexpr :: gexpr :: bexpr :: [] ->
+            Color <| ColorArgb.FromArgb(
+                        255uy,
+                        (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
+                        (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
+                        (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
+        | _ -> failwith "rgb needs three parameters"
+    | "rgba" ->
+        match exprs with
+        | rexpr :: gexpr :: bexpr :: aexpr :: [] ->
+            Color <| ColorArgb.FromArgb(
+                        (evalExpr aexpr ctx).AssertNumber "alpha" |> clampToByte,
+                        (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
+                        (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
+                        (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
+        | _ -> failwith "rgba needs four parameters"
+    | "srgb" ->
+        match exprs with
+        | rexpr :: gexpr :: bexpr :: [] ->
+            Color <| ColorArgb.FromArgb(
+                        255uy,
+                        (evalExpr rexpr ctx).AssertNumber "red" |> toSColorByte,
+                        (evalExpr gexpr ctx).AssertNumber "green" |> toSColorByte,
+                        (evalExpr bexpr ctx).AssertNumber "blue" |> toSColorByte)
+        | _ -> failwith "srgb needs four parameters"
+    | "srgba" ->
+        match exprs with
+        | rexpr :: gexpr :: bexpr :: aexpr :: [] ->
+            Color <| ColorArgb.FromArgb(
+                        (evalExpr aexpr ctx).AssertNumber "alpha" |> toSColorByte,
+                        (evalExpr rexpr ctx).AssertNumber "red" |> toSColorByte,
+                        (evalExpr gexpr ctx).AssertNumber "green" |> toSColorByte,
+                        (evalExpr bexpr ctx).AssertNumber "blue" |> toSColorByte)
+        | _ -> failwith "rgba needs four parameters"
+    | "kernel" ->
+        createKernel exprs ctx
+    | "convolute" ->
+        match exprs with
+        | posExpr :: kernelExpr :: [] ->
+            match evalExpr kernelExpr ctx, evalExpr posExpr ctx with
+            | Kernel(length, radius, values), Pos(x, y) ->
+                ctx.Bitmap.Convolute(int x, int y, int radius, int length, values)
+                |> Color
+            | l, r -> failwithf "%A %A" l r
+        | _ -> failwith "convolute needs 2 parameters"
+    | "rect" ->
+        match exprs with
+        | xyposExpr :: whposExpr :: [] ->
+            let x,y = (evalExpr xyposExpr ctx).AssertPos "Rect"
+            let w,h = (evalExpr whposExpr ctx).AssertPos "Rect"
+            Rect(x, y, w, h)
+        | _ -> failwith "rect needs 2 parameters"
+    | "sin" ->
+        match exprs with
+        | expr :: [] -> (evalExpr expr ctx).AssertNumber("Sin") |> sin |> Number
+        | _ -> failwith "sin needs 1 parameter"
+    | "cos" ->
+        match exprs with
+        | expr :: [] -> (evalExpr expr ctx).AssertNumber("Cos") |> cos |> Number
+        | _ -> failwith "sin needs 1 parameter"
+    | "tan" ->
+        match exprs with
+        | expr :: [] -> (evalExpr expr ctx).AssertNumber("Tan") |> tan |> Number
+        | _ -> failwith "tan needs 1 parameter"
+    | "asin" ->
+        match exprs with
+        | expr :: [] -> (evalExpr expr ctx).AssertNumber("Asin") |> asin |> Number
+        | _ -> failwith "asin needs 1 parameter"
+    | "acos" ->
+        match exprs with
+        | expr :: [] -> (evalExpr expr ctx).AssertNumber("Acos") |> acos |> Number
+        | _ -> failwith "acos needs 1 parameter"
+    | "atan" ->
+        match exprs with
+        | expr :: [] -> (evalExpr expr ctx).AssertNumber("Atan") |> atan |> Number
+        | _ -> failwith "atan needs 1 parameter"
+    | "atan2" ->
+        match exprs with
+        | aexpr :: bexpr:: [] ->
+            let a = (evalExpr aexpr ctx).AssertNumber("Atan2")
+            let b = (evalExpr bexpr ctx).AssertNumber("Atan2")
+            Number <| atan2 a b
+        | _ -> failwith "atan2 needs 2 parameters"
+    | "abs" ->
+        match exprs with
+        | expr :: [] -> (evalExpr expr ctx).AssertNumber("Abs") |> abs |> Number
+        | _ -> failwith "abs needs 1 parameter"
+    | "sqrt" ->
+        match exprs with
+        | expr :: [] ->
+            match evalExpr expr ctx with
+            | Number n -> Number <| sqrt n
+            | Color argb -> Color <| ColorArgb.FromSargb(argb.ScA, sqrt argb.ScR, sqrt argb.ScG, sqrt argb.ScB)
+            | other -> failwithf "Sqrt expected Number or Color but found %A" other
+        | _ -> failwith "sqrt needs 1 parameter"
+    | other -> failwithf "Unkown function '%s'" other
+
+and createKernel exprs ctx =
+    let length = sqrt <| float exprs.Length
+    if round(length) <> length
+    then failwithf "The number of kernel elements must be quadratic, but is '%A'" length
+    else
+        let values =
+            exprs
+            |> List.map (fun expr -> (evalExpr expr ctx).AssertNumber "Kernel")
+            |> List.toArray
+        Kernel(int length, (int length) / 2, values)
+

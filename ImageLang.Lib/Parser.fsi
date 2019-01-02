@@ -5,15 +5,6 @@ type token =
   | STRING of (string)
   | NUMBER of (double)
   | EOF
-  | ABS
-  | SQRT
-  | SIN
-  | COS
-  | TAN
-  | ASIN
-  | ACOS
-  | ATAN
-  | ATAN2
   | LOG
   | BLT
   | QMARK
@@ -22,23 +13,19 @@ type token =
   | FALSE
   | LBRACE
   | RBRACE
+  | LBRACKET
+  | RBRACKET
   | IF
   | ELSE
   | FOR
   | IN
   | YIELD
   | DOTDOT
-  | RGB
-  | RGBA
-  | SRGB
-  | SRGBA
-  | KERNEL
-  | CONVOLUTE
-  | RECT
   | NOT
   | AT
   | COMMA
   | DOT
+  | SEMICOLON
   | LPAREN
   | RPAREN
   | PLUS
@@ -61,15 +48,6 @@ type tokenId =
     | TOKEN_STRING
     | TOKEN_NUMBER
     | TOKEN_EOF
-    | TOKEN_ABS
-    | TOKEN_SQRT
-    | TOKEN_SIN
-    | TOKEN_COS
-    | TOKEN_TAN
-    | TOKEN_ASIN
-    | TOKEN_ACOS
-    | TOKEN_ATAN
-    | TOKEN_ATAN2
     | TOKEN_LOG
     | TOKEN_BLT
     | TOKEN_QMARK
@@ -78,23 +56,19 @@ type tokenId =
     | TOKEN_FALSE
     | TOKEN_LBRACE
     | TOKEN_RBRACE
+    | TOKEN_LBRACKET
+    | TOKEN_RBRACKET
     | TOKEN_IF
     | TOKEN_ELSE
     | TOKEN_FOR
     | TOKEN_IN
     | TOKEN_YIELD
     | TOKEN_DOTDOT
-    | TOKEN_RGB
-    | TOKEN_RGBA
-    | TOKEN_SRGB
-    | TOKEN_SRGBA
-    | TOKEN_KERNEL
-    | TOKEN_CONVOLUTE
-    | TOKEN_RECT
     | TOKEN_NOT
     | TOKEN_AT
     | TOKEN_COMMA
     | TOKEN_DOT
+    | TOKEN_SEMICOLON
     | TOKEN_LPAREN
     | TOKEN_RPAREN
     | TOKEN_PLUS
@@ -128,6 +102,8 @@ type nonTerminalId =
     | NONTERM_Molecule
     | NONTERM_MoleculeList
     | NONTERM_Atom
+    | NONTERM_ParameterListOpt
+    | NONTERM_ParameterList
 /// This function maps tokens to integer indexes
 val tagOfToken: token -> int
 

@@ -22,13 +22,6 @@ let keywordMap =
     temp.Add("and", AND)
     temp.Add("or", OR)
     temp.Add("not", NOT)
-    temp.Add("rgb", RGB)
-    temp.Add("rgba", RGBA)
-    temp.Add("srgb", SRGB)
-    temp.Add("srgba", SRGBA)
-    temp.Add("kernel", KERNEL)
-    temp.Add("convolute", CONVOLUTE)
-    temp.Add("rect", RECT)
     temp.Add("for", FOR)
     temp.Add("in", IN)
     temp.Add("yield", YIELD)
@@ -38,15 +31,6 @@ let keywordMap =
     temp.Add("false", FALSE)
     temp.Add("log", LOG)
     temp.Add("blt", BLT)
-    temp.Add("abs", ABS)
-    temp.Add("sqrt", SQRT)
-    temp.Add("sin", SIN)
-    temp.Add("cos", COS)
-    temp.Add("tan", TAN)
-    temp.Add("asin", ASIN)
-    temp.Add("acos", ACOS)
-    temp.Add("atan", ATAN)
-    temp.Add("atan2", ATAN2)
     temp
 
 let lookup word =
@@ -72,6 +56,8 @@ rule token = parse
 | ")"						{ dbg RPAREN }
 | "{"						{ dbg LBRACE }
 | "}"						{ dbg RBRACE }
+| "["                       { dbg LBRACKET }
+| "]"                       { dbg RBRACKET }
 | "=="						{ dbg EQEQ }
 | "!="						{ dbg NEQ }
 | ">"						{ dbg GT }
@@ -89,6 +75,7 @@ rule token = parse
 | "."						{ dbg DOT }
 | "?"						{ dbg QMARK }
 | ":"						{ dbg COLON }
+| ";"						{ dbg SEMICOLON }
 | ident						{ dbg (lookup (lexeme lexbuf)) }
 | int						{ dbg (NUMBER(Double.Parse(lexeme lexbuf))) }
 | float						{ dbg (NUMBER(Double.Parse(lexeme lexbuf))) }

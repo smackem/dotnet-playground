@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:ImageLang"
+        xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
         mc:Ignorable="d"
         Title="ImageLang" Height="450" Width="800">
     <Grid Background="{DynamicResource {x:Static SystemColors.ControlBrushKey}}">
@@ -28,14 +28,13 @@
             <Image Source="{Binding Path=TargetBitmap}" Stretch="None" VerticalAlignment="Top" HorizontalAlignment="Left" />
         </ScrollViewer>
         <GridSplitter Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Height="5" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" />
-        <TextBox Grid.Row="2"
-                 Text="{Binding Path=Source, UpdateSourceTrigger=PropertyChanged}"
-                 AcceptsReturn="True"
-                 FontFamily="Consolas, monospace"
-                 FontSize="12pt"
-                 VerticalScrollBarVisibility="Auto"
-                 HorizontalScrollBarVisibility="Auto"
-                 AcceptsTab="True"
-                 PreviewKeyUp="TextBox_PreviewKeyUp" />
+        <avalonEdit:TextEditor x:Name="textEditor"
+                               Grid.Row="2"
+                               TextChanged="TextEditor_TextChanged"
+                               FontFamily="Consolas,monospace"
+                               FontSize="12pt"
+                               VerticalScrollBarVisibility="Auto"
+                               HorizontalScrollBarVisibility="Auto"
+                               PreviewKeyUp="TextBox_PreviewKeyUp" />
     </Grid>
 </Window>

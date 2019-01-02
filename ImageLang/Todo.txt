@@ -17,7 +17,7 @@
 + blt statement to blt target to source
 + output console window
 - remember last script
-- usual method-call syntax
++ usual method-call syntax
 - ';' for position expressions
 + better tostring for output
 - better blt: take rect into account

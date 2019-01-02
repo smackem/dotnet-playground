@@ -3,7 +3,7 @@
 open Ast
 
 let dbg value =
-    //printfn "%s" (if obj.ReferenceEquals(value, null) then "(null)" else value.ToString())
+    printfn "%s" (if obj.ReferenceEquals(value, null) then "(null)" else value.ToString())
     //printfn "%A" value
     value
 
@@ -17,15 +17,13 @@ let dbg value =
 %token EQEQ NEQ GT GE LT LE
 %token PLUS MINUS STAR SLASH PERCENT
 %token LPAREN RPAREN
-%token NOT AT COMMA DOT
-%token RGB RGBA SRGB SRGBA KERNEL CONVOLUTE RECT
+%token NOT AT COMMA DOT SEMICOLON
 %token FOR IN YIELD DOTDOT
 %token IF ELSE
-%token LBRACE RBRACE
+%token LBRACE RBRACE LBRACKET RBRACKET
 %token TRUE FALSE
 %token QMARK COLON
 %token LOG BLT
-%token ABS SQRT SIN COS TAN ASIN ACOS ATAN ATAN2
 
 %token EOF
 
@@ -34,8 +32,8 @@ let dbg value =
 %token <string> IDENT
 
 %left AT NOT QMARK COLON OR
-%left COMMA DOT
-%right MINUS
+%left SEMICOLON DOT
+%right MINUS LPAREN
 %%
 
 // ----------------------------- start
@@ -68,7 +66,7 @@ Statement:
                                                 { dbg (ForInRange($2, $4, $6, $8)) }
     | YIELD Expr
                                                 { dbg (Yield $2) }
-    | LOG LPAREN MoleculeList RPAREN
+    | LOG LPAREN ParameterList RPAREN
                                                 { dbg (Log ($3)) }
     | BLT Expr
                                                 { dbg (Blt ($2)) }
@@ -103,40 +101,7 @@ Term:
     | Function                                   { $1 }
 
 Function:
-    | RGB LPAREN Molecule Molecule Molecule RPAREN
-                                                { dbg (Rgb($3, $4, $5))}
-    | RGBA LPAREN Molecule Molecule Molecule Molecule RPAREN
-                                                { dbg (Rgba($3, $4, $5, $6))}
-    | SRGB LPAREN Molecule Molecule Molecule RPAREN
-                                                { dbg (Srgb($3, $4, $5))}
-    | SRGBA LPAREN Molecule Molecule Molecule Molecule RPAREN
-                                                { dbg (Srgba($3, $4, $5, $6))}
-    | KERNEL LPAREN MoleculeList RPAREN
-                                                { dbg (Kernel (List.rev $3))}
-    | CONVOLUTE LPAREN Molecule Molecule RPAREN
-                                                { dbg (Convolute ($3, $4))}
-    | RECT LPAREN Molecule Molecule RPAREN
-                                                { dbg (Rect ($3, $4))}
-    | SIN LPAREN Molecule RPAREN
-                                                { dbg (Sin ($3)) }
-    | COS LPAREN Molecule RPAREN
-                                                { dbg (Cos ($3)) }
-    | TAN LPAREN Molecule RPAREN
-                                                { dbg (Tan ($3)) }
-    | ASIN LPAREN Molecule RPAREN
-                                                { dbg (Asin ($3)) }
-    | ACOS LPAREN Molecule RPAREN
-                                                { dbg (Acos ($3)) }
-    | ATAN LPAREN Molecule RPAREN
-                                                { dbg (Atan ($3)) }
-    | ATAN2 LPAREN Molecule Molecule RPAREN
-                                                { dbg (Atan2 ($3, $4)) }
-    | ABS LPAREN Molecule RPAREN
-                                                { dbg (Abs ($3)) }
-    | SQRT LPAREN Molecule RPAREN
-                                                { dbg (Sqrt ($3)) }
-    | Molecule
-                                                { $1 }
+    | Molecule                                  { $1 }
 
 Molecule:
     | MINUS Atom                                { dbg (Neg $2) }
@@ -151,9 +116,19 @@ MoleculeList:
 Atom:
     | LPAREN Expr RPAREN                        { dbg $2 }
     | AT Atom                                   { dbg (At $2) }
-    | Atom COMMA Atom                           { dbg (Pos($1, $3)) }
+    | Atom SEMICOLON Atom                       { dbg (Pos($1, $3)) }
     | IDENT                                     { dbg (Ident $1) }
     | NUMBER                                    { dbg (Number $1) }
     | STRING                                    { dbg (String $1) }
     | TRUE                                      { dbg (Boolean true) }
     | FALSE                                     { dbg (Boolean false) }
+    | IDENT LPAREN ParameterListOpt RPAREN      { dbg (FunctionInvoke($1, $3))}
+    | LBRACKET MoleculeList RBRACKET            { dbg (Kernel $2) }
+
+ParameterListOpt:
+    | ParameterList                             { $1 }
+    |                                           { [] }
+
+ParameterList:
+    | Expr COMMA ParameterList                  { dbg ($1 :: $3) }
+    | Expr                                      { dbg ([$1]) }
