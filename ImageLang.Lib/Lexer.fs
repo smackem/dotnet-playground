@@ -300,12 +300,12 @@ and _fslex_token  _fslex_state lexbuf =
           )
   | 28 -> ( 
 # 80 "Lexer.fsl"
-                            dbg (NUMBER(Double.Parse(lexeme lexbuf))) 
+                            dbg (NUMBER(Double.Parse(lexeme lexbuf, CultureInfo.InvariantCulture))) 
 # 304 "Lexer.fs"
           )
   | 29 -> ( 
 # 81 "Lexer.fsl"
-                              dbg (NUMBER(Double.Parse(lexeme lexbuf))) 
+                              dbg (NUMBER(Double.Parse(lexeme lexbuf, CultureInfo.InvariantCulture))) 
 # 309 "Lexer.fs"
           )
   | 30 -> ( 

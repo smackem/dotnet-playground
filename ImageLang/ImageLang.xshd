@@ -30,9 +30,27 @@
             <Word>log</Word>
             <Word>blt</Word>
 		</Keywords>
+	  <Keywords foreground="RoyalBlue">
+      <Word>rgb</Word>
+      <Word>rgba</Word>
+      <Word>srgb</Word>
+      <Word>srgba</Word>
+      <Word>kernel</Word>
+      <Word>convolute</Word>
+      <Word>rect</Word>
+      <Word>sin</Word>
+      <Word>cos</Word>
+      <Word>tan</Word>
+      <Word>asin</Word>
+      <Word>acos</Word>
+      <Word>atan</Word>
+      <Word>atan2</Word>
+      <Word>abs</Word>
+      <Word>sqrt</Word>
+	  </Keywords>
 		
 		<!-- Digits -->
-		<Rule foreground="DarkRed">
+		<Rule foreground="DarkMagenta">
             \b0[xX][0-9a-fA-F]+  # hex number
             |    \b
             (    \d+(\.[0-9]+)?   #number with optional floating point

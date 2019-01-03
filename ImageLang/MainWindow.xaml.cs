@@ -46,7 +46,7 @@ namespace ImageLang
             textEditor.Options.ShowColumnRuler = true;
 
             IHighlightingDefinition customHighlighting;
-            using (Stream s = GetType().Assembly.GetManifestResourceStream("ImageLang.ImageLang.xshd"))
+            using (var s = GetType().Assembly.GetManifestResourceStream("ImageLang.ImageLang.xshd"))
             {
                 if (s == null)
                     throw new InvalidOperationException("Could not find embedded resource");
@@ -76,6 +76,10 @@ namespace ImageLang
 
         void RenderButton_OnClick(object sender, RoutedEventArgs e)
         {
+            _model.Source = textEditor.SelectionLength != 0
+                ? textEditor.SelectedText
+                : textEditor.Text;
+
             var oldCursor = Cursor;
             Cursor = Cursors.Wait;
             try
@@ -99,7 +103,6 @@ namespace ImageLang
 
         void TextEditor_TextChanged(object sender, EventArgs e)
         {
-            _model.Source = textEditor.Text;
         }
     }
 }

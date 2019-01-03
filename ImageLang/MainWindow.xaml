@@ -16,7 +16,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         
-        <StackPanel Orientation="Horizontal" Grid.Row="0">
+        <StackPanel Orientation="Horizontal"  Grid.Row="0">
             <Button Click="OpenButton_OnClick">Open...</Button>
             <Button Click="RenderButton_OnClick">Render</Button>
         </StackPanel>
@@ -25,7 +25,9 @@
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
                       Margin="0,0,0,5">
-            <Image Source="{Binding Path=TargetBitmap}" Stretch="None" VerticalAlignment="Top" HorizontalAlignment="Left" />
+            <Image Source="{Binding Path=TargetBitmap}" Stretch="Fill" VerticalAlignment="Top" HorizontalAlignment="Left"
+                   Width="{Binding Path=Source.PixelWidth, RelativeSource={RelativeSource Self}}"
+                   Height="{Binding Path=Source.PixelHeight, RelativeSource={RelativeSource Self}}" />
         </ScrollViewer>
         <GridSplitter Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Height="5" Background="{DynamicResource {x:Static SystemColors.ActiveBorderBrushKey}}" />
         <avalonEdit:TextEditor x:Name="textEditor"

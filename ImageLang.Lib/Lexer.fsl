@@ -77,8 +77,8 @@ rule token = parse
 | ":"						{ dbg COLON }
 | ";"						{ dbg SEMICOLON }
 | ident						{ dbg (lookup (lexeme lexbuf)) }
-| int						{ dbg (NUMBER(Double.Parse(lexeme lexbuf))) }
-| float						{ dbg (NUMBER(Double.Parse(lexeme lexbuf))) }
+| int						{ dbg (NUMBER(Double.Parse(lexeme lexbuf, CultureInfo.InvariantCulture))) }
+| float						{ dbg (NUMBER(Double.Parse(lexeme lexbuf, CultureInfo.InvariantCulture))) }
 | eof						{ dbg EOF }
 | "//"						{ dbg (comment lexbuf; token lexbuf) }
 | "/"						{ dbg SLASH }

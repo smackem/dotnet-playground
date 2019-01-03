@@ -13,7 +13,7 @@ namespace ImageLang
 {
     internal class RenderEngine : IDisposable
     {
-        public readonly static Gdi.Imaging.PixelFormat RequiredPixelFormat = Gdi.Imaging.PixelFormat.Format32bppArgb;
+        public static readonly Gdi.Imaging.PixelFormat RequiredPixelFormat = Gdi.Imaging.PixelFormat.Format32bppArgb;
 
         readonly Gdi.Bitmap sourceBitmap;
 
@@ -43,15 +43,14 @@ namespace ImageLang
             var targetBitmap = new Bitmap(bitmap.Width, bitmap.Height, RequiredPixelFormat);
 
             using (var g = Graphics.FromImage(targetBitmap))
-                g.DrawImageUnscaled(bitmap, Point.Empty);
+                g.DrawImage(bitmap, new Rectangle(0, 0, bitmap.Width, bitmap.Height));
 
             return targetBitmap;
         }
 
         public void Dispose()
         {
-            if (this.sourceBitmap != null)
-                this.sourceBitmap.Dispose();
+            this.sourceBitmap?.Dispose();
         }
 
         unsafe class RenderSurface : IBitmap, IDisposable
@@ -108,16 +107,19 @@ namespace ImageLang
                 var g = 0.0;
                 var b = 0.0;
                 byte a = 255;
+                var kernelIndex = 0;
 
                 for (int kernelY = 0, sourceY = y - radius; kernelY < length; kernelY++, sourceY++)
                 {
+                    var pSource = this.pSourcePixels + (sourceY * sourceData.Width + x - radius);
+
                     for (int kernelX = 0, sourceX = x - radius; kernelX < length; kernelX++, sourceX++)
                     {
                         if (sourceX >= 0 && sourceX < this.source.Width
                         && sourceY >= 0 && sourceY < this.source.Height)
                         {
-                            var value = kernel[kernelY * length + kernelX];
-                            var px = this.pSourcePixels[sourceY * sourceData.Width + sourceX];
+                            var value = kernel[kernelIndex];
+                            var px = *pSource;
                             r += value * px.R;
                             g += value * px.G;
                             b += value * px.B;
@@ -126,6 +128,9 @@ namespace ImageLang
                             if (sourceX == x && sourceY == y)
                                 a = px.A;
                         }
+
+                        kernelIndex++;
+                        pSource++;
                     }
                 }
 
@@ -137,8 +142,22 @@ namespace ImageLang
 
             public void Blt(int x, int y, int width, int height)
             {
-                var size = this.sourceData.Height * this.sourceData.Stride;
-                Buffer.MemoryCopy(this.pTargetPixels, this.pSourcePixels, size, size);
+                if (x == 0 && y == 0 && width == this.sourceData.Width && height == this.sourceData.Height)
+                {
+                    var size = this.sourceData.Height * this.sourceData.Stride;
+                    Buffer.MemoryCopy(this.pTargetPixels, this.pSourcePixels, size, size);
+                }
+                else
+                {
+                    for (var bottom = y + height; y < bottom; y++)
+                    {
+                        Buffer.MemoryCopy(
+                            this.pTargetPixels + (y * this.targetData.Width + x),
+                            this.pSourcePixels + (y * this.sourceData.Width + x),
+                            width * sizeof(ColorArgb),
+                            width * sizeof(ColorArgb));
+                    }
+                }
             }
 
             byte Clamp(double d)

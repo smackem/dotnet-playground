@@ -31,7 +31,7 @@ let dbg value =
 %token <string> STRING
 %token <string> IDENT
 
-%left AT NOT QMARK COLON OR
+%left AT NOT QMARK COLON OR BLT
 %left SEMICOLON DOT
 %right MINUS LPAREN
 %%
@@ -67,9 +67,11 @@ Statement:
     | YIELD Expr
                                                 { dbg (Yield $2) }
     | LOG LPAREN ParameterList RPAREN
-                                                { dbg (Log ($3)) }
-    | BLT Expr
-                                                { dbg (Blt ($2)) }
+                                                { dbg (Log $3) }
+    | BLT LPAREN Expr RPAREN
+                                                { dbg (Blt <| Some($3)) }
+    | BLT
+                                                { dbg (Blt None) }
 
 // ----------------------------- Expression
 
@@ -89,18 +91,15 @@ Cond:
     | Term GE Term                              { dbg (Ge($1, $3)) }
     | Term LT Term                              { dbg (Lt($1, $3)) }
     | Term LE Term                              { dbg (Le($1, $3)) }
-    | Term IN Term                              { dbg (In($1, $3)) }
     | Term                                      { $1 }
 
 Term:
-    | Term PLUS Function                         { dbg (Plus($1, $3)) }
-    | Term MINUS Function                        { dbg (Minus($1, $3)) }
-    | Term STAR Function                         { dbg (Mul($1, $3)) }
-    | Term SLASH Function                        { dbg (Div($1, $3)) }
-    | Term PERCENT Function                      { dbg (Mod($1, $3)) }
-    | Function                                   { $1 }
-
-Function:
+    | Term PLUS Molecule                        { dbg (Plus($1, $3)) }
+    | Term MINUS Molecule                       { dbg (Minus($1, $3)) }
+    | Term STAR Molecule                        { dbg (Mul($1, $3)) }
+    | Term SLASH Molecule                       { dbg (Div($1, $3)) }
+    | Term PERCENT Molecule                     { dbg (Mod($1, $3)) }
+    | Term IN Molecule                          { dbg (In($1, $3)) }
     | Molecule                                  { $1 }
 
 Molecule:

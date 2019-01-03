@@ -79,6 +79,7 @@ type value =
         | Color argb -> argb.ToString()
         | _ -> sprintf "'%A'" this
 
+let lastRectIdent = "<@last_rect>"
 
 type Context(bitmap: IBitmap, parent: Context option) =
     let idents = new Dictionary<string, value>()
@@ -89,16 +90,16 @@ type Context(bitmap: IBitmap, parent: Context option) =
             match parent with
             | Some ctx -> ctx.GetIdent ident
             | None -> None
-    member this.SetIdent ident value = idents.[ident] <- value
+    member this.SetIdent ident value =
+        if this.HasLocalIdent ident then idents.[ident] <- value
+        else
+            match parent with
+            | Some ctx -> ctx.SetIdent ident value
+            | None -> ()
+    member this.NewIdent ident value = idents.[ident] <- value
     member this.HasLocalIdent ident = idents.ContainsKey ident
     member this.Bitmap = bitmap
 
-let toi f = int (f + 0.5)
-
-let toSColorByte f =
-    if f > 0.0 && f <= 1.0
-    then byte(f * 255.0 + 0.5)
-    else clampToByte f
 
 let walkRect x y width height =
     let nx, ny, nw, nh = toi x, toi y, toi width, toi height
@@ -110,12 +111,13 @@ let walkRect x y width height =
 
 let rec interpret program bitmap =
     let ctx = new Context(bitmap, None)
-    ctx.SetIdent "W" (Number <| float bitmap.Width)
-    ctx.SetIdent "H" (Number <| float bitmap.Height)
-    ctx.SetIdent "IMAGE" (Rect(0.0, 0.0, float bitmap.Width, float bitmap.Height))
-    ctx.SetIdent "BLACK" (Color <| ColorArgb.FromArgb(255uy, 0uy, 0uy, 0uy))
-    ctx.SetIdent "WHITE" (Color <| ColorArgb.FromArgb(255uy, 255uy, 255uy, 255uy))
-    ctx.SetIdent "TRANSPARENT" (Color <| ColorArgb.FromArgb(0uy, 255uy, 255uy, 255uy))
+    ctx.NewIdent lastRectIdent (Rect(0.0, 0.0, 0.0, 0.0))
+    ctx.NewIdent "W" (Number <| float bitmap.Width)
+    ctx.NewIdent "H" (Number <| float bitmap.Height)
+    ctx.NewIdent "IMAGE" (Rect(0.0, 0.0, float bitmap.Width, float bitmap.Height))
+    ctx.NewIdent "BLACK" (Color <| ColorArgb.FromArgb(255uy, 0uy, 0uy, 0uy))
+    ctx.NewIdent "WHITE" (Color <| ColorArgb.FromArgb(255uy, 255uy, 255uy, 255uy))
+    ctx.NewIdent "TRANSPARENT" (Color <| ColorArgb.FromArgb(0uy, 255uy, 255uy, 255uy))
     match program with
     | Statements stmts -> evalStmtList stmts ctx
 
@@ -130,7 +132,7 @@ and evalStmt stmt ctx =
         then failwithf "Identifier %s is already declared" ident
         else
             let v = evalExpr rexpr ctx
-            ctx.SetIdent ident v
+            ctx.NewIdent ident v
     | Assignment(ident, rexpr) ->
         match ctx.GetIdent ident with
         | None -> failwithf "Identifier %s not found" ident
@@ -154,20 +156,21 @@ and evalStmt stmt ctx =
         | Boolean false -> evalStmtList elseStmts ctx
         | other -> failwithf "If expects a boolean expression but found '%A'" other
     | ForIn(ident, collExpr, stmts) ->
-        let positions =
+        let rect, positions =
             match evalExpr collExpr ctx with
-            | Rect(x, y, width, height) -> walkRect x y width height
+            | Rect(x, y, width, height) as rect -> rect, walkRect x y width height
             | other -> failwithf "ForIn expects a rect expression but found '%A'" other
         for pos in positions do
-            ctx.SetIdent ident pos
+            ctx.NewIdent ident pos
             evalStmtList stmts ctx
+        ctx.SetIdent lastRectIdent rect
     | ForInRange(ident, lowerExpr, upperExpr, stmts) ->
         let lower, upper =
             match evalExpr lowerExpr ctx, evalExpr upperExpr ctx with
             | Number l, Number u -> toi l, toi u
             | l, u -> failwithf "ForInRange expects a lower Number and an upper Number but found '%A' and '%A" l u
         for n in lower .. upper do
-            ctx.SetIdent ident (Number <| float n)
+            ctx.NewIdent ident (Number <| float n)
             evalStmtList stmts ctx
     | Yield expr -> ()
     | Log exprs ->
@@ -176,8 +179,11 @@ and evalStmt stmt ctx =
             let v = evalExpr expr ctx
             buffer.Append(v.Print()).Append(" ") |> ignore)
         printfn "%s" <| buffer.ToString()
-    | Blt expr ->
-        let x,y,w,h = (evalExpr expr ctx).AssertRect("Blt")
+    | Blt exprOpt ->
+        let x,y,w,h =
+            match exprOpt with
+            | Some expr -> (evalExpr expr ctx).AssertRect("Blt")
+            | None -> match ctx.GetIdent(lastRectIdent) with Some(r) -> r.AssertRect("Blt") | None -> failwithf "%s not found" lastRectIdent
         ctx.Bitmap.Blt(toi x, toi y, toi w, toi h)
 
 and evalExpr expr ctx =
@@ -206,19 +212,19 @@ and evalExpr expr ctx =
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l + r)
         | Number n, Color c ->
-            Color <| ColorArgb.FromArgb(c.A, clampToByte(float c.R + n), clampToByte(float c.G + n), clampToByte(float c.B + n))
+            Color <| ColorArgb.FromArgb(c.A, clampFloat(float c.R + n), clampFloat(float c.G + n), clampFloat(float c.B + n))
         | Color c, Number n ->
-            Color <| ColorArgb.FromArgb(c.A, clampToByte(float c.R + n), clampToByte(float c.G + n), clampToByte(float c.B + n))
+            Color <| ColorArgb.FromArgb(c.A, clampFloat(float c.R + n), clampFloat(float c.G + n), clampFloat(float c.B + n))
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.A, l.R + r.R, l.G + r.G, l.B + r.B)
+            Color <| ColorArgb.FromArgb(l.A, clampInt(int l.R + int r.R), clampInt(int l.G + int r.G), clampInt(int l.B + int r.B))
         | l, r -> failwithf "+ expects colors or numbers but found %A and %A" l r
     | Minus(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l - r)
         | Color c, Number n ->
-            Color <| ColorArgb.FromArgb(c.A, clampToByte(float c.R - n), clampToByte(float c.G - n), clampToByte(float c.B - n))
+            Color <| ColorArgb.FromArgb(c.A, clampFloat(float c.R - n), clampFloat(float c.G - n), clampFloat(float c.B - n))
         | Color l, Color r ->
-            Color <| ColorArgb.FromArgb(l.A, l.R - r.R, l.G - r.G, l.B - r.B)
+            Color <| ColorArgb.FromArgb(l.A, clampInt(int l.R - int r.R), clampInt(int l.G - int r.G), clampInt(int l.B - int r.B))
         | l, r -> failwithf "- expects colors or numbers but found %A and %A" l r
     | Mul(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
@@ -242,9 +248,9 @@ and evalExpr expr ctx =
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
         | Number l, Number r -> Number (l % r)
         | Color c, Number n ->
-            Color <| ColorArgb.FromSargb(c.ScA, c.ScR % n, c.ScG % n, c.ScB % n)
+            Color <| ColorArgb.FromArgb(c.A, clampFloat(float c.R % n), clampFloat(float c.G % n), clampFloat(float c.B % n))
         | Color l, Color r ->
-            Color <| ColorArgb.FromSargb(l.ScA, l.ScR % r.ScR, l.ScG % r.ScG, l.ScB % r.ScB)
+            Color <| ColorArgb.FromArgb(l.A, l.R % r.R, l.G % r.G, l.B % r.B)
         | l, r -> failwithf "%% expects colors or numbers but found %A and %A" l r
     | In(lexpr, rexpr) ->
         match evalExpr lexpr ctx, evalExpr rexpr ctx with
@@ -291,18 +297,18 @@ and invokeFunc ident exprs ctx =
         | rexpr :: gexpr :: bexpr :: [] ->
             Color <| ColorArgb.FromArgb(
                         255uy,
-                        (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
-                        (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
-                        (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
+                        (evalExpr rexpr ctx).AssertNumber "red" |> clampFloat,
+                        (evalExpr gexpr ctx).AssertNumber "green" |> clampFloat,
+                        (evalExpr bexpr ctx).AssertNumber "blue" |> clampFloat)
         | _ -> failwith "rgb needs three parameters"
     | "rgba" ->
         match exprs with
         | rexpr :: gexpr :: bexpr :: aexpr :: [] ->
             Color <| ColorArgb.FromArgb(
-                        (evalExpr aexpr ctx).AssertNumber "alpha" |> clampToByte,
-                        (evalExpr rexpr ctx).AssertNumber "red" |> clampToByte,
-                        (evalExpr gexpr ctx).AssertNumber "green" |> clampToByte,
-                        (evalExpr bexpr ctx).AssertNumber "blue" |> clampToByte)
+                        (evalExpr aexpr ctx).AssertNumber "alpha" |> clampFloat,
+                        (evalExpr rexpr ctx).AssertNumber "red" |> clampFloat,
+                        (evalExpr gexpr ctx).AssertNumber "green" |> clampFloat,
+                        (evalExpr bexpr ctx).AssertNumber "blue" |> clampFloat)
         | _ -> failwith "rgba needs four parameters"
     | "srgb" ->
         match exprs with
@@ -369,7 +375,7 @@ and invokeFunc ident exprs ctx =
         | aexpr :: bexpr:: [] ->
             let a = (evalExpr aexpr ctx).AssertNumber("Atan2")
             let b = (evalExpr bexpr ctx).AssertNumber("Atan2")
-            Number <| atan2 a b
+            Number <| System.Math.Atan2(a, b)
         | _ -> failwith "atan2 needs 2 parameters"
     | "abs" ->
         match exprs with

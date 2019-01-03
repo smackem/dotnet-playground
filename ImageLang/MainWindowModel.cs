@@ -62,8 +62,8 @@ namespace ImageLang
                 using (bmp)
                 {
                     var hbmp = bmp.GetHbitmap();
-                    var options = BitmapSizeOptions.FromEmptyOptions();
-                    var targetBitmap = Imaging.CreateBitmapSourceFromHBitmap(hbmp, IntPtr.Zero, Int32Rect.Empty, options);
+                    var options = BitmapSizeOptions.FromWidthAndHeight(bmp.Width, bmp.Height);
+                    var targetBitmap = Imaging.CreateBitmapSourceFromHBitmap(hbmp, IntPtr.Zero, new Int32Rect(0, 0, bmp.Width, bmp.Height), options);
                     targetBitmap.Freeze();
                     TargetBitmap = targetBitmap;
                 }
@@ -85,6 +85,21 @@ namespace ImageLang
             }
 
             return result.Program;
+        }
+
+        BitmapSource ConvertTo96Dpi(BitmapSource bitmap)
+        {
+            var dpi = 96.0;
+            var width = bitmap.PixelWidth;
+            var height = bitmap.PixelHeight;
+
+            var stride = width * bitmap.Format.BitsPerPixel;
+            var pixelData = new byte[stride * height];
+            bitmap.CopyPixels(pixelData, stride, 0);
+
+            var result = BitmapSource.Create(width, height, dpi, dpi, bitmap.Format, null, pixelData, stride);
+            result.Freeze();
+            return result;
         }
     }
 }

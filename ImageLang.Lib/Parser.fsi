@@ -98,7 +98,6 @@ type nonTerminalId =
     | NONTERM_AndExpr
     | NONTERM_Cond
     | NONTERM_Term
-    | NONTERM_Function
     | NONTERM_Molecule
     | NONTERM_MoleculeList
     | NONTERM_Atom

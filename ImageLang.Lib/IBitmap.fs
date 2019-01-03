@@ -5,11 +5,24 @@ open System.Runtime.InteropServices
 #nowarn "9" // explicit struct layout might lead to inverifiable IL code
 
 module internal Helpers =
-    let clampToByte f =
+    let clampFloat f =
         match f with
         | f when f < 0.0 -> 0uy
         | f when f > 255.0 -> 255uy
         | _ -> byte (f + 0.5)
+
+    let clampInt n =
+        match n with
+        | n when n < 0 -> 0uy
+        | n when n > 255 -> 255uy
+        | _ -> byte n
+
+    let toi f = int (f + 0.5)
+
+    let toSColorByte f =
+        if f > 0.0 && f <= 1.0
+        then byte(f * 255.0 + 0.5)
+        else clampFloat f
 
 open Helpers
 
@@ -43,7 +56,7 @@ type ColorArgb =
         new ColorArgb(Argb = argb)
 
     static member public FromSargb(scA, scR, scG, scB) =
-        new ColorArgb(A = clampToByte(scA * 255.0), R = clampToByte(scR * 255.0), G = clampToByte(scG * 255.0), B = clampToByte(scB * 255.0))
+        new ColorArgb(A = clampFloat(scA * 255.0), R = clampFloat(scR * 255.0), G = clampFloat(scG * 255.0), B = clampFloat(scB * 255.0))
 
     member this.ScA = (float this.A) / 255.0
     member this.ScR = (float this.R) / 255.0

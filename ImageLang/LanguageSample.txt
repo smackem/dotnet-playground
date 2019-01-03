@@ -68,11 +68,150 @@ highpass := [-1 -1 -1 -1 -1
              -1 -1 -1 -1 -1]
 
 for pos in IMAGE {
-    @pos = convolute(pos, gauss)
-}
-
-blt IMAGE
+	@pos = convolute(pos, gauss)
+} blt IMAGE
 
 for pos in IMAGE {
     @pos = convolute(pos, highpass)
 }
+
+// =========================================
+
+for pos in IMAGE {
+    @pos = rgb(@pos.i, @pos.i, @pos.i)
+} blt IMAGE
+
+gauss := [0 1 2 1 0
+          1 2 4 2 1
+          2 4 8 4 2
+          1 2 4 2 1
+          0 1 2 1 0]
+
+edges := [-1 -1 -1
+          -1  8 -1
+          -1 -1 -1]
+
+for i in 1..1 {
+    log("gauss", i)
+    for pos in IMAGE {
+        @pos = convolute(pos, gauss)
+    } blt IMAGE
+
+    log("edges", i)
+    for pos in IMAGE {
+        @pos = convolute(pos, edges)
+    } blt IMAGE
+}
+
+log("close")
+for pos in IMAGE {
+    @pos = @(pos.x);(H - pos.y)
+} blt IMAGE
+
+sobel := [-2 -1  0
+          -1  1  1
+           0  1  2]
+for pos in rect(200;200, 20;20) {
+    new := convolute(pos, sobel)
+    log("orig", @pos, "conved", convolute(pos, sobel), "minused", new - @pos)
+    @pos = new - @pos
+}
+
+// ==========================================
+
+for xy in rect(100;100, 200;200) {
+    @xy = -@xy
+} blt
+
+for xy in IMAGE {
+    @xy = -@xy
+}
+
+// ==========================================
+
+for xy in IMAGE {
+    if xy in rect(0;0, 50;100) {
+        @xy = BLACK
+    } else {
+        @xy = WHITE
+    }
+} blt
+
+log (2)
+
+sobelx := [ 1  2  1
+            0  0  0
+           -1 -2 -1]
+sobely := [ 1  0 -1
+            2  0 -2
+            1  0 -1]
+
+i := 0
+rad := 0
+
+for xy in IMAGE {
+    sx := convolute(xy, sobelx)
+    sy := convolute(xy, sobely)
+    r := atan2(sy.r, sx.r)
+    if r != 0 {
+        rad = rad + r
+        i = i + 1
+        log("angle", r * 180 / 3.1415926535897931)
+    }
+} blt
+
+log("angle", (rad / i) * 180 / 3.1415926535897931)
+
+// ==========================================
+
+gauss :=  [ 0  1  0
+            1  2  1
+            0  1  0]
+sobelx := [ 1  0 -1
+            2  0 -2
+            1  0 -1]
+sobely := [ 1  2  1
+            0  0  0
+           -1 -2 -1]
+
+for xy in IMAGE { @xy = convolute(xy, gauss) } blt
+
+for xy in IMAGE {
+    p := @xy
+    sx := convolute(xy, sobelx)
+    sy := convolute(xy, sobely)
+    @xy = rgba(255 - p.r, sx.g, sy.b, 255 - (sx.i + sy.i))
+} blt
+
+
+// ==========================================
+
+gauss :=  [ 0  1  0
+            1  2  1
+            0  1  0]
+
+for xy in IMAGE { @xy = convolute(xy, gauss) } blt
+
+sobelx := [ 1  0 -1
+            2  0 -2
+            1  0 -1]
+sobely := [ 1  2  1
+            0  0  0
+           -1 -2 -1]
+sobelc := [-2 -1  0
+           -1  0  1
+            0  1  2]
+
+robertsa := [ 1  0
+              0 -1]
+robertsb := [ 0  1
+             -1  0]
+
+for xy in IMAGE {
+    p := @xy
+    sx := convolute(xy, sobelx)
+    sy := convolute(xy, sobely)
+    ra := convolute(xy, robertsa)
+    rb := convolute(xy, robertsb)
+    @xy = rgb(sx.i, sy.i, ra.i + rb.i)
+} blt

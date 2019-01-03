@@ -17,15 +17,16 @@
 + blt statement to blt target to source
 + output console window
 - remember last script
-+ usual method-call syntax
-- ';' for position expressions
++ conventional method-call syntax
++ ';' for position expressions
 + better tostring for output
-- better blt: take rect into account
++ better blt: take rect into account, no params -> blt last rect
++ execute only selection
 - hex literals
 - HMTL-like color literals (#ffc080@ff)
 + shortcut for render
 + gridsplitters
-- avalonedit with syntax highlighting
++ avalonedit with syntax highlighting
 - source and target view in image area
 - yield statements (for&if-statement expressions)
 - draw blocks

@@ -13,7 +13,7 @@ and statement =
     | ForInRange of string * expr * expr * statement list
     | Yield of expr
     | Log of expr list
-    | Blt of expr
+    | Blt of expr option
 
 and expr =
     | Or of expr * expr
